@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TicketScope — Intelligent Ticket Triage</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-card: #1c2128;
+  --bg-hover: #21262d;
+  --bg-active: #282e36;
+  --border: #30363d;
+  --border-light: #3d444d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #656d76;
+  --accent: #e85d4a;
+  --accent-glow: rgba(232, 93, 74, 0.15);
+  --accent-hover: #f06b59;
+  --blue: #58a6ff;
+  --green: #3fb950;
+  --yellow: #d29922;
+  --purple: #bc8cff;
+  --pink: #f778ba;
+  --cyan: #76e3ea;
+  --orange: #f0883e;
+  --red: #f85149;
+  --status-new: #f85149;
+  --status-assigned: #58a6ff;
+  --status-wip: #d29922;
+  --status-pending: #bc8cff;
+  --status-resolved: #3fb950;
+  --status-closed: #656d76;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+  --font: 'DM Sans', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { font-size: 15px; }
+body {
+  font-family: var(--font);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+/* ─── Header ─── */
+.header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  cursor: pointer;
+  user-select: none;
+}
+.logo-ticket { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+.logo-scope { font-size: 1.5rem; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+.logo-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-left: 12px;
+  font-weight: 500;
+}
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ─── Buttons ─── */
+.btn {
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-light); }
+.btn-accent {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-accent:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-sm { padding: 4px 10px; font-size: 0.75rem; }
+.btn-active { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+.btn-ghost { border: none; background: none; }
+.btn-ghost:hover { background: var(--bg-hover); }
+
+/* ─── Import Screen ─── */
+.import-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 60px);
+  padding: 2rem;
+  animation: fadeIn 0.5s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+.import-hero {
+  text-align: center;
+  max-width: 680px;
+  margin-bottom: 2rem;
+}
+.import-hero h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  letter-spacing: -1px;
+}
+.import-hero h1 span { color: var(--accent); }
+.import-hero p { color: var(--text-secondary); font-size: 1.05rem; line-height: 1.6; }
+
+.import-box {
+  background: var(--bg-secondary);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 3rem 2rem;
+  max-width: 720px;
+  width: 100%;
+  text-align: center;
+  transition: all var(--transition);
+  cursor: pointer;
+  position: relative;
+}
+.import-box:hover, .import-box.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+.import-box-icon { font-size: 3rem; margin-bottom: 1rem; }
+.import-box h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+.import-box p { color: var(--text-muted); font-size: 0.85rem; }
+.import-box input[type="file"] { display: none; }
+
+.import-or {
+  color: var(--text-muted);
+  margin: 1.5rem 0;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 720px;
+  width: 100%;
+}
+.import-or::before, .import-or::after { content:''; flex:1; height:1px; background: var(--border); }
+
+.paste-area {
+  max-width: 720px;
+  width: 100%;
+}
+.paste-area textarea {
+  width: 100%;
+  min-height: 200px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  padding: 1rem;
+  resize: vertical;
+  transition: border-color var(--transition);
+}
+.paste-area textarea:focus { outline: none; border-color: var(--accent); }
+.paste-area textarea::placeholder { color: var(--text-muted); }
+.paste-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+.format-hint { color: var(--text-muted); font-size: 0.75rem; }
+
+.sample-btn {
+  color: var(--blue);
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.sample-btn:hover { text-decoration: underline; }
+
+/* ─── Dashboard ─── */
+.dashboard { display: none; animation: fadeIn 0.4s ease; }
+.dashboard.active { display: block; }
+
+/* Stats Bar */
+.stats-bar {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.stat-card {
+  flex: 1;
+  background: var(--bg-secondary);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 500; }
+.stat-value { font-size: 1.75rem; font-weight: 700; font-family: var(--mono); letter-spacing: -1px; }
+.stat-sub { font-size: 0.75rem; color: var(--text-secondary); }
+
+/* Toolbar */
+.toolbar {
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  flex-wrap: wrap;
+}
+.toolbar-section { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.toolbar-divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+.search-input {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 0.8rem;
+  padding: 6px 10px 6px 30px;
+  width: 220px;
+  transition: all var(--transition);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23656d76' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 9px center;
+}
+.search-input:focus { outline: none; border-color: var(--accent); width: 300px; }
+.search-input::placeholder { color: var(--text-muted); }
+
+/* Owner Filters */
+.owner-filters {
+  padding: 0.5rem 1.5rem;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-primary);
+}
+.owner-chip {
+  font-family: var(--font);
+  font-size: 0.75rem;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.owner-chip:hover { border-color: var(--border-light); color: var(--text-primary); }
+.owner-chip.active { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+.owner-chip .count {
+  background: var(--bg-hover);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-family: var(--mono);
+}
+.owner-chip.active .count { background: rgba(232,93,74,0.25); }
+
+/* Content Area */
+.content-area {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  min-height: calc(100vh - 250px);
+}
+.content-area.panel-closed { grid-template-columns: 1fr; }
+
+/* Table */
+.table-container {
+  overflow: auto;
+  padding: 0;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+thead th {
+  background: var(--bg-secondary);
+  padding: 0.65rem 1rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+thead th:hover { color: var(--text-secondary); }
+thead th .sort-arrow { font-size: 0.65rem; margin-left: 4px; opacity: 0.5; }
+thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+tbody tr:hover { background: var(--bg-hover); }
+tbody td { padding: 0.6rem 1rem; vertical-align: middle; }
+.ticket-id {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--blue);
+}
+.ticket-type {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.type-inc { background: rgba(88,166,255,0.12); color: var(--blue); }
+.type-task { background: rgba(63,185,80,0.12); color: var(--green); }
+.type-req { background: rgba(188,140,255,0.12); color: var(--purple); }
+
+/* Status Badges */
+.status-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  display: inline-block;
+  white-space: nowrap;
+}
+.status-new { background: rgba(248,81,73,0.15); color: var(--status-new); }
+.status-assigned { background: rgba(88,166,255,0.15); color: var(--status-assigned); }
+.status-wip { background: rgba(210,153,34,0.15); color: var(--status-wip); }
+.status-pending { background: rgba(188,140,255,0.15); color: var(--status-pending); }
+.status-resolved { background: rgba(63,185,80,0.15); color: var(--status-resolved); }
+.status-closed { background: rgba(101,109,118,0.15); color: var(--status-closed); }
+
+.desc-cell { max-width: 400px; }
+.desc-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+.topic-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: var(--bg-active);
+  color: var(--text-secondary);
+  margin-top: 3px;
+  font-weight: 500;
+}
+.owner-cell { font-weight: 500; white-space: nowrap; }
+
+/* Side Panel */
+.side-panel {
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 0;
+}
+.panel-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.panel-header h3 { font-size: 0.85rem; font-weight: 600; }
+.panel-section {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.panel-section h4 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+/* Charts in panel */
+.mini-chart { margin-bottom: 0.5rem; }
+.chart-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+}
+.chart-bar-label {
+  width: 100px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: right;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chart-bar-track {
+  flex: 1;
+  height: 20px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.chart-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  padding-left: 6px;
+  font-size: 0.7rem;
+  font-family: var(--mono);
+  font-weight: 600;
+  color: #fff;
+  min-width: fit-content;
+}
+
+/* Similar tickets */
+.similar-ticket {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.similar-ticket:last-child { border-bottom: none; }
+.similar-ticket-id { font-family: var(--mono); font-size: 0.75rem; color: var(--blue); }
+.similar-ticket-desc { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+.similar-ticket-owner { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+.similarity-badge {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(63,185,80,0.12);
+  color: var(--green);
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+/* Keyboard hint */
+.kbd {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--text-muted);
+}
+
+/* ─── Tabs ─── */
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+}
+.panel-tab {
+  flex: 1;
+  padding: 0.65rem 0.5rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.panel-tab:hover { color: var(--text-secondary); }
+.panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ─── Export Modal ─── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+}
+.modal h3 { margin-bottom: 1rem; }
+.modal-actions { display: flex; gap: 8px; margin-top: 1.5rem; flex-wrap: wrap; }
+
+/* ─── Toast ─── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+  z-index: 300;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ─── Empty state ─── */
+.empty-row td {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ─── Image preview ─── */
+.img-thumb {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.img-thumb:hover { border-color: var(--accent); transform: scale(1.05); }
+.ocr-progress-bar {
+  height: 6px;
+  background: var(--bg-card);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.ocr-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.processing-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Responsive ─── */
+@media (max-width: 900px) {
+  .content-area { grid-template-columns: 1fr !important; }
+  .side-panel { display: none; }
+  .stats-bar { flex-wrap: wrap; }
+  .stat-card { min-width: 120px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── HEADER ─── -->
+<div class="header">
+  <div class="logo" onclick="resetApp()">
+    <span class="logo-ticket">Ticket</span><span class="logo-scope">Scope</span>
+    <span class="logo-sub">Intelligent Ticket Triage</span>
+  </div>
+  <div class="header-actions" id="headerActions" style="display:none;">
+    <button class="btn btn-sm" onclick="togglePanel()" title="Toggle insights panel">◧ Insights</button>
+    <button class="btn btn-sm" onclick="showAddMore()">+ Add Screenshots</button>
+    <button class="btn btn-sm" onclick="showExportModal()">↓ Export</button>
+    <button class="btn btn-sm btn-ghost" onclick="resetApp()" title="Import new data">↺ Reset</button>
+  </div>
+</div>
+
+<!-- ─── IMPORT SCREEN ─── -->
+<div class="import-screen" id="importScreen">
+  <div class="import-hero">
+    <h1>Welcome to Ticket<span>Scope</span></h1>
+    <p>Drop your ServiceNow screenshots right in — TicketScope uses AI to extract tickets from images. You can also paste text data or CSV exports. Ctrl+V works for clipboard screenshots too.</p>
+  </div>
+
+  <div class="import-box" id="importBox" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault(); this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
+    <div class="import-box-icon" id="importIcon">📸</div>
+    <h3 id="importBoxTitle">Drop screenshots or CSV files here</h3>
+    <p id="importBoxSub">Accepts images (PNG, JPG), CSV, TSV — or click to browse</p>
+    <input type="file" id="fileInput" accept=".csv,.tsv,.txt,.png,.jpg,.jpeg,.gif,.webp,.bmp" multiple onchange="handleFile(event)">
+  </div>
+
+  <!-- Image preview area -->
+  <div id="imagePreviewArea" style="display:none; max-width:720px; width:100%; margin-top:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+      <span style="font-size:0.85rem; color:var(--text-secondary);" id="imagePreviewLabel">Screenshots loaded</span>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-sm" onclick="clearImages()">Clear</button>
+        <button class="btn btn-sm btn-accent" id="ocrBtn" onclick="processScreenshots()">Extract Tickets →</button>
+      </div>
+    </div>
+    <div id="imagePreviewGrid" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+    <div id="ocrProgress" style="display:none; margin-top:1rem;"></div>
+  </div>
+
+  <div class="import-or">or paste ticket data as text</div>
+
+  <div class="paste-area">
+    <textarea id="pasteInput" placeholder="Paste ticket data here — any format works!
+
+Examples:
+INC2076823  New        Unassigned    EPIC orders missing: Esther Melamed
+INC2076762  Assigned   Alex Grippo   Patient pass/patient instructions: Claire Harrison
+TASK0491682 Open       Alex Grippo   Unable to designate SIBO testing
+
+Or CSV format:
+Number,Status,Owner,Description
+INC2076823,New,,EPIC orders missing: Esther Melamed
+INC2076762,Assigned,Alex Grippo,Patient pass/patient instructions"></textarea>
+    <div class="paste-actions">
+      <span class="format-hint">Accepts CSV, TSV, tab-separated, or space-delimited ticket data</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="sample-btn" onclick="loadSampleData()">Load sample data</button>
+        <button class="btn btn-accent" onclick="parseAndLoad()">Parse & Launch →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── DASHBOARD ─── -->
+<div class="dashboard" id="dashboard">
+  <!-- Stats Bar -->
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <input class="search-input" id="searchInput" type="text" placeholder="Search tickets..." oninput="applyFilters()">
+    <div class="toolbar-divider"></div>
+    <div class="toolbar-section" id="statusFilters"></div>
+    <div class="toolbar-divider"></div>
+    <div class="toolbar-section">
+      <button class="btn btn-sm" id="sortBtn" onclick="cycleSortMode()">↕ Sort: Default</button>
+    </div>
+  </div>
+
+  <!-- Owner Filters -->
+  <div class="owner-filters" id="ownerFilters"></div>
+
+  <!-- Content -->
+  <div class="content-area" id="contentArea">
+    <div class="table-container">
+      <table>
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="side-panel" id="sidePanel">
+      <div class="panel-header">
+        <h3 id="panelTitle">Team Insights</h3>
+        <button class="btn btn-sm btn-ghost" onclick="togglePanel()">✕</button>
+      </div>
+      <div class="panel-tabs">
+        <div class="panel-tab active" data-tab="trends" onclick="switchTab('trends')">Trends</div>
+        <div class="panel-tab" data-tab="similar" onclick="switchTab('similar')">Similar</div>
+        <div class="panel-tab" data-tab="workload" onclick="switchTab('workload')">Workload</div>
+      </div>
+      <div id="panelContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <h3>Export Tickets</h3>
+    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.5rem;">Export the currently filtered view.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="exportCSV()">CSV Spreadsheet</button>
+      <button class="btn" onclick="exportJSON()">JSON Data</button>
+      <button class="btn" onclick="exportMarkdown()">Markdown Summary</button>
+      <button class="btn btn-ghost" onclick="closeExportModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───
+let allTickets = [];
+let filteredTickets = [];
+let activeOwner = null;
+let activeStatuses = new Set();
+let sortMode = 'default';
+let panelOpen = true;
+let activeTab = 'trends';
+
+// ─── STATUS NORMALIZATION ───
+function normalizeStatus(raw) {
+  const s = raw.toLowerCase().replace(/[^a-z ]/g, '').trim();
+  if (s.includes('new')) return 'New';
+  if (s.includes('assigned')) return 'Assigned';
+  if (s.includes('work in progress') || s === 'wip') return 'Work In Progress';
+  if (s.includes('pending')) return 'Pending Customer';
+  if (s.includes('resolved')) return 'Resolved';
+  if (s.includes('closed')) return 'Closed';
+  if (s.includes('open')) return 'Open';
+  return raw.trim();
+}
+
+function statusClass(status) {
+  const s = status.toLowerCase();
+  if (s.includes('new') || s === 'open') return 'status-new';
+  if (s.includes('assigned')) return 'status-assigned';
+  if (s.includes('work in progress') || s === 'wip') return 'status-wip';
+  if (s.includes('pending')) return 'status-pending';
+  if (s.includes('resolved')) return 'status-resolved';
+  if (s.includes('closed')) return 'status-closed';
+  return 'status-assigned';
+}
+
+// ─── TICKET TYPE DETECTION ───
+function detectType(number) {
+  const n = number.toUpperCase();
+  if (n.startsWith('INC')) return 'INC';
+  if (n.startsWith('TASK')) return 'TASK';
+  if (n.startsWith('REQ')) return 'REQ';
+  if (n.startsWith('CHG')) return 'CHG';
+  return 'INC';
+}
+
+function typeClass(type) {
+  if (type === 'INC') return 'type-inc';
+  if (type === 'TASK') return 'type-task';
+  return 'type-req';
+}
+
+// ─── TOPIC DETECTION ───
+function detectTopic(desc) {
+  const d = desc.toLowerCase();
+  const topics = [
+    { keywords: ['order', 'orders', 'pharmacy', 'rx', 'medication', 'med'], topic: 'Orders' },
+    { keywords: ['inbasket', 'in basket', 'message', 'messages', 'inbox'], topic: 'InBasket' },
+    { keywords: ['fax', 'scan', 'document', 'print'], topic: 'Fax/Docs' },
+    { keywords: ['template', 'letter', 'smarttext', 'smart text'], topic: 'Templates' },
+    { keywords: ['kiosk', 'check-in', 'checkin', 'arrival'], topic: 'Kiosk' },
+    { keywords: ['search', 'filter', 'find', 'look up', 'lookup'], topic: 'Search' },
+    { keywords: ['security', 'access', 'permission', 'login', 'role'], topic: 'Security' },
+    { keywords: ['schedule', 'appointment', 'slot', 'cadence', 'calendar'], topic: 'Scheduling' },
+    { keywords: ['lab', 'result', 'imaging', 'radiology', 'pathology'], topic: 'Results' },
+    { keywords: ['referral', 'auth', 'authorization', 'prior auth'], topic: 'Referrals' },
+    { keywords: ['billing', 'charge', 'claim', 'insurance', 'coverage'], topic: 'Billing' },
+    { keywords: ['patient', 'face sheet', 'facesheet', 'demographics'], topic: 'Patient Info' },
+    { keywords: ['transfer', 'migrate', 'athena', 'conversion'], topic: 'Migration' },
+    { keywords: ['visit', 'encounter', 'reason', 'lwbs', 'level of service'], topic: 'Visits' },
+    { keywords: ['test', 'testing', 'sibo', 'diagnostic'], topic: 'Testing' },
+  ];
+  for (const t of topics) {
+    if (t.keywords.some(k => d.includes(k))) return t.topic;
+  }
+  return 'General';
+}
+
+// ─── SIMILARITY ENGINE ───
+function tokenize(text) {
+  return text.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(w => w.length > 2);
+}
+
+function similarity(a, b) {
+  const tokA = new Set(tokenize(a));
+  const tokB = new Set(tokenize(b));
+  if (tokA.size === 0 || tokB.size === 0) return 0;
+  let overlap = 0;
+  tokA.forEach(t => { if (tokB.has(t)) overlap++; });
+  return overlap / Math.max(tokA.size, tokB.size);
+}
+
+function findSimilar(ticket, tickets, topN = 5) {
+  return tickets
+    .filter(t => t.number !== ticket.number)
+    .map(t => ({ ticket: t, score: similarity(ticket.description, t.description) }))
+    .filter(r => r.score > 0.2)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topN);
+}
+
+// ─── PARSING ENGINE ───
+function parseTicketData(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  if (lines.length === 0) return [];
+
+  const tickets = [];
+  // Try CSV first
+  const firstLine = lines[0].toLowerCase();
+  const isCSV = firstLine.includes(',') && (firstLine.includes('number') || firstLine.includes('ticket') || firstLine.includes('inc'));
+  const isTSV = firstLine.includes('\t');
+
+  if (isCSV || isTSV) {
+    const delim = isTSV ? '\t' : ',';
+    const headers = lines[0].split(delim).map(h => h.trim().toLowerCase());
+
+    // Find column indices
+    const numIdx = headers.findIndex(h => h.includes('number') || h.includes('ticket') || h.includes('id'));
+    const statIdx = headers.findIndex(h => h.includes('status') || h.includes('state') || h.includes('action'));
+    const ownerIdx = headers.findIndex(h => h.includes('owner') || h.includes('assigned') || h.includes('assignee'));
+    const descIdx = headers.findIndex(h => h.includes('description') || h.includes('short') || h.includes('summary') || h.includes('subject'));
+    const groupIdx = headers.findIndex(h => h.includes('group') || h.includes('assignment'));
+
+    const start = (numIdx >= 0 || statIdx >= 0) ? 1 : 0;
+    for (let i = start; i < lines.length; i++) {
+      const cols = lines[i].split(delim).map(c => c.trim());
+      if (cols.length < 2) continue;
+
+      const number = numIdx >= 0 ? cols[numIdx] : cols[0] || '';
+      if (!number.match(/^(INC|TASK|REQ|CHG|inc|task|req|chg)?\s*\d/i) && numIdx >= 0) continue;
+
+      const rawStatus = statIdx >= 0 ? cols[statIdx] : cols[1] || '';
+      const owner = ownerIdx >= 0 ? cols[ownerIdx] : '';
+      const desc = descIdx >= 0 ? cols[descIdx] : cols[cols.length - 1] || '';
+      const group = groupIdx >= 0 ? cols[groupIdx] : '';
+
+      tickets.push({
+        number: number.replace(/^(INC|TASK|REQ|CHG)\s*/i, (m) => m.toUpperCase().trim()),
+        type: detectType(number),
+        status: normalizeStatus(rawStatus),
+        owner: owner || 'Unassigned',
+        description: desc,
+        group: group,
+        topic: detectTopic(desc)
+      });
+    }
+  }
+
+  // Fallback: line-by-line regex
+  if (tickets.length === 0) {
+    let currentOwner = 'Unassigned';
+    for (const line of lines) {
+      // Detect owner header: "Name Lastname  N items"
+      const ownerMatch = line.match(/^([A-Z][a-z]+ [A-Z][a-zA-Z'-]+)\s+\d+\s*items?/);
+      if (ownerMatch) {
+        currentOwner = ownerMatch[1];
+        continue;
+      }
+      if (/^unassigned/i.test(line.trim())) {
+        currentOwner = 'Unassigned';
+        continue;
+      }
+
+      // Match ticket lines
+      const ticketMatch = line.match(/((?:INC|TASK|REQ|CHG)\s*\d{5,})\s+([\w ]+?)\s{2,}(.+)/i)
+        || line.match(/((?:INC|TASK|REQ|CHG)\s*\d{5,})\s+(\S+(?:\s+\S+)?)\s+(.+)/i);
+
+      if (ticketMatch) {
+        let [, number, middle, desc] = ticketMatch;
+        number = number.replace(/\s+/g, '').toUpperCase();
+
+        // Try to figure out if middle is a status or owner
+        const knownStatuses = ['new', 'assigned', 'open', 'work in progress', 'wip', 'pending', 'pending customer', 'resolved', 'closed'];
+        const midLower = middle.trim().toLowerCase();
+        let status = '', owner = currentOwner;
+
+        if (knownStatuses.some(s => midLower.includes(s))) {
+          status = middle.trim();
+          // Check if desc starts with an owner name
+          const ownerInDesc = desc.match(/^([A-Z][a-z]+ [A-Z][a-zA-Z'-]+)\s{2,}(.+)/);
+          if (ownerInDesc) {
+            owner = ownerInDesc[1];
+            desc = ownerInDesc[2];
+          }
+        } else {
+          // Middle might be owner
+          owner = middle.trim();
+          // Status might be embedded
+          status = 'Open';
+        }
+
+        tickets.push({
+          number,
+          type: detectType(number),
+          status: normalizeStatus(status || 'Open'),
+          owner: owner || currentOwner,
+          description: desc.trim(),
+          group: '',
+          topic: detectTopic(desc)
+        });
+        continue;
+      }
+
+      // Simpler pattern: just number + description
+      const simpleMatch = line.match(/((?:INC|TASK|REQ|CHG)\s*\d{5,})\s+(.+)/i);
+      if (simpleMatch) {
+        let [, number, desc] = simpleMatch;
+        number = number.replace(/\s+/g, '').toUpperCase();
+        tickets.push({
+          number,
+          type: detectType(number),
+          status: 'Open',
+          owner: currentOwner,
+          description: desc.trim(),
+          group: '',
+          topic: detectTopic(desc)
+        });
+      }
+    }
+  }
+
+  return tickets;
+}
+
+// ─── SAMPLE DATA ───
+function loadSampleData() {
+  document.getElementById('pasteInput').value = `Number,Status,Assigned To,Assignment Group,Short Description
+INC2076823,New,Unassigned,MDSC-EPIC-Ambulatory,EPIC orders missing: Esther Melamed (em37993)
+INC2076934,New,Unassigned,MDSC-EPIC-Ambulatory,Reason for Visit: LWBS forcing a Level of Service to be chosen: Eric L Crowell (elc324)
+INC2076762,Assigned,Alex Grippo,MDSC-EPIC-Ambulatory,Patient pass/patient instructions: Claire Harrison (cfh527)
+INC2075424,Assigned,Alex Grippo,MDSC-EPIC-Ambulatory,No way to fax a facesheet: Kayley Rothenberger (kar3257)
+TASK0491682,Open,Alex Grippo,MDSC-EPIC-Ambulatory,Unable to designate SIBO testing to be performed by CommonWealth Diagnostics International: Kristina Tzartzeva (krt393)
+INC2075405,Assigned,Amy DeWitte,MDSC-EPIC-Ambulatory,Need InBasket Security updated
+INC2071827,Pending Customer,Amy DeWitte,MDSC-EPIC-Ambulatory,TMS Orders in Athena did not transfer to Epic: Monica Verastegui (mmv824)
+INC2073898,Work In Progress,Tiffany Tesch,MDSC-EPIC-Ambulatory,Release of Information letter template for General Surgery
+INC2073247,Work In Progress,Tiffany Tesch,MDSC-EPIC-Ambulatory,KIOSK: Lluvia Yuriria Reyes (lr33283)
+INC2071224,Work In Progress,Tiffany Tesch,MDSC-EPIC-Ambulatory,EPIC smart search with filters for pharmacy labs and imaging
+INC2074501,Assigned,Jordan Miles,MDSC-EPIC-Ambulatory,Scheduling template not pulling correct visit types for cardiology
+INC2075102,New,Unassigned,MDSC-EPIC-Ambulatory,Lab orders routing to wrong department: Rachel Kim (rk4421)
+INC2074899,Assigned,Jordan Miles,MDSC-EPIC-Ambulatory,Referral authorization workflow missing approval step
+TASK0491700,Work In Progress,Tiffany Tesch,MDSC-EPIC-Ambulatory,Build new SmartText templates for Dermatology department
+INC2075678,Pending Customer,Amy DeWitte,MDSC-EPIC-Ambulatory,Billing charges not dropping for telehealth visits: Sarah Chen (sc9982)`;
+}
+
+// ─── FILE HANDLING ───
+let pendingImages = []; // {file, dataUrl, base64, mediaType}
+
+function handleFile(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  processFiles(files);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length) processFiles(files);
+}
+
+function processFiles(files) {
+  const textFiles = files.filter(f => /\.(csv|tsv|txt)$/i.test(f.name));
+  const imageFiles = files.filter(f => /\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name));
+
+  // If text file, handle directly
+  if (textFiles.length > 0) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      document.getElementById('pasteInput').value = ev.target.result;
+      parseAndLoad();
+    };
+    reader.readAsText(textFiles[0]);
+    return;
+  }
+
+  // If images, queue them for OCR
+  if (imageFiles.length > 0) {
+    imageFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target.result;
+        const base64 = dataUrl.split(',')[1];
+        const mediaType = file.type || 'image/png';
+        pendingImages.push({ file, dataUrl, base64, mediaType });
+        renderImagePreviews();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+}
+
+// Listen for paste events (Ctrl+V screenshots)
+document.addEventListener('paste', (e) => {
+  if (document.getElementById('dashboard').classList.contains('active')) return;
+  const items = Array.from(e.clipboardData?.items || []);
+  const imageItems = items.filter(i => i.type.startsWith('image/'));
+  if (imageItems.length === 0) return;
+
+  e.preventDefault();
+  imageItems.forEach(item => {
+    const file = item.getAsFile();
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      const base64 = dataUrl.split(',')[1];
+      pendingImages.push({ file, dataUrl, base64, mediaType: file.type });
+      renderImagePreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+function renderImagePreviews() {
+  const area = document.getElementById('imagePreviewArea');
+  const grid = document.getElementById('imagePreviewGrid');
+  const label = document.getElementById('imagePreviewLabel');
+
+  if (pendingImages.length === 0) {
+    area.style.display = 'none';
+    return;
+  }
+
+  area.style.display = 'block';
+  label.textContent = `${pendingImages.length} screenshot${pendingImages.length > 1 ? 's' : ''} loaded`;
+  grid.innerHTML = pendingImages.map((img, i) =>
+    `<img src="${img.dataUrl}" class="img-thumb" title="${img.file.name || 'Pasted image'}" onclick="removePendingImage(${i})">`
+  ).join('');
+}
+
+function removePendingImage(i) {
+  pendingImages.splice(i, 1);
+  renderImagePreviews();
+}
+
+function clearImages() {
+  pendingImages = [];
+  renderImagePreviews();
+  document.getElementById('fileInput').value = '';
+}
+
+async function processScreenshots() {
+  if (pendingImages.length === 0) return;
+
+  const btn = document.getElementById('ocrBtn');
+  const progress = document.getElementById('ocrProgress');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="processing-spinner"></span>Extracting...';
+  progress.style.display = 'block';
+  progress.innerHTML = `
+    <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:4px;" id="ocrStatus">Sending screenshot${pendingImages.length > 1 ? 's' : ''} to Claude for extraction...</div>
+    <div class="ocr-progress-bar"><div class="ocr-progress-fill" id="ocrFill" style="width:10%"></div></div>
+  `;
+
+  try {
+    let allExtractedTickets = [];
+
+    for (let i = 0; i < pendingImages.length; i++) {
+      const img = pendingImages[i];
+      document.getElementById('ocrStatus').textContent = `Processing screenshot ${i + 1} of ${pendingImages.length}...`;
+      document.getElementById('ocrFill').style.width = `${((i + 0.5) / pendingImages.length) * 90 + 10}%`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: { type: 'base64', media_type: img.mediaType, data: img.base64 }
+              },
+              {
+                type: 'text',
+                text: `Extract all ServiceNow tickets from this screenshot. Return ONLY a JSON array, no markdown, no backticks, no explanation. Each ticket object must have these exact fields:
+{"number": "INC2076823", "status": "New", "owner": "Unassigned", "description": "Short description text", "group": "Assignment group if visible"}
+
+Rules:
+- number: The ticket/incident number (INC, TASK, REQ, CHG prefix + digits). Remove any spaces.
+- status: Exactly as shown (New, Assigned, Open, Work In Progress, Pending Customer, Resolved, Closed)
+- owner: The person's name. If grouped under a name header, use that name. If blank or not shown, use "Unassigned".
+- description: The short description / summary text
+- group: Assignment group if visible, otherwise empty string
+
+Return ONLY the JSON array.`
+              }
+            ]
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`API error ${response.status}: ${errText}`);
+      }
+
+      const data = await response.json();
+      const text = data.content.map(c => c.text || '').join('');
+      const cleaned = text.replace(/```json|```/g, '').trim();
+
+      try {
+        const tickets = JSON.parse(cleaned);
+        if (Array.isArray(tickets)) {
+          allExtractedTickets.push(...tickets);
+        }
+      } catch (parseErr) {
+        console.warn('JSON parse failed for screenshot', i, parseErr, cleaned);
+        // Try to extract from text as fallback
+        const match = cleaned.match(/\[[\s\S]*\]/);
+        if (match) {
+          try {
+            const tickets = JSON.parse(match[0]);
+            if (Array.isArray(tickets)) allExtractedTickets.push(...tickets);
+          } catch(e2) { /* skip this image */ }
+        }
+      }
+
+      document.getElementById('ocrFill').style.width = `${((i + 1) / pendingImages.length) * 90 + 10}%`;
+    }
+
+    document.getElementById('ocrFill').style.width = '100%';
+    document.getElementById('ocrStatus').textContent = `Extracted ${allExtractedTickets.length} tickets. Building dashboard...`;
+
+    if (allExtractedTickets.length === 0) {
+      throw new Error('No tickets could be extracted from the screenshots.');
+    }
+
+    // Convert to internal format
+    allTickets = allExtractedTickets.map(t => ({
+      number: (t.number || '').replace(/\s+/g, '').toUpperCase(),
+      type: detectType(t.number || ''),
+      status: normalizeStatus(t.status || 'Open'),
+      owner: t.owner || 'Unassigned',
+      description: t.description || '',
+      group: t.group || '',
+      topic: detectTopic(t.description || '')
+    }));
+
+    // Deduplicate by number
+    const seen = new Set();
+    allTickets = allTickets.filter(t => {
+      if (seen.has(t.number)) return false;
+      seen.add(t.number);
+      return true;
+    });
+
+    activeOwner = null;
+    activeStatuses = new Set();
+    sortMode = 'default';
+
+    document.getElementById('importScreen').style.display = 'none';
+    document.getElementById('dashboard').classList.add('active');
+    document.getElementById('headerActions').style.display = 'flex';
+
+    buildDashboard();
+    showToast(`Extracted ${allTickets.length} tickets from ${pendingImages.length} screenshot${pendingImages.length > 1 ? 's' : ''}.`);
+    pendingImages = [];
+
+  } catch (err) {
+    console.error('Screenshot extraction error:', err);
+    showToast('Error extracting tickets: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Extract Tickets →';
+    progress.style.display = 'none';
+  }
+}
+
+// ─── LAUNCH DASHBOARD ───
+function parseAndLoad() {
+  const text = document.getElementById('pasteInput').value.trim();
+  if (!text) { showToast('Please paste some ticket data first.'); return; }
+
+  allTickets = parseTicketData(text);
+  if (allTickets.length === 0) { showToast('Could not parse any tickets. Check the format and try again.'); return; }
+
+  activeOwner = null;
+  activeStatuses = new Set();
+  sortMode = 'default';
+
+  document.getElementById('importScreen').style.display = 'none';
+  document.getElementById('dashboard').classList.add('active');
+  document.getElementById('headerActions').style.display = 'flex';
+
+  buildDashboard();
+  showToast(`Loaded ${allTickets.length} tickets successfully.`);
+}
+
+function resetApp() {
+  document.getElementById('importScreen').style.display = '';
+  document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('headerActions').style.display = 'none';
+  allTickets = [];
+  filteredTickets = [];
+}
+
+// ─── BUILD DASHBOARD ───
+function buildDashboard() {
+  buildStats();
+  buildStatusFilters();
+  buildOwnerFilters();
+  buildTableHead();
+  applyFilters();
+  renderPanel();
+}
+
+function buildStats() {
+  const owners = new Set(allTickets.map(t => t.owner));
+  const statuses = {};
+  allTickets.forEach(t => { statuses[t.status] = (statuses[t.status] || 0) + 1; });
+  const newCount = (statuses['New'] || 0) + (statuses['Open'] || 0);
+  const wipCount = statuses['Work In Progress'] || 0;
+  const pendCount = statuses['Pending Customer'] || 0;
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-card">
+      <span class="stat-label">Total Tickets</span>
+      <span class="stat-value">${allTickets.length}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Team Members</span>
+      <span class="stat-value">${owners.size}</span>
+      <span class="stat-sub">${owners.size - (allTickets.some(t=>t.owner==='Unassigned')?1:0)} active</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">New / Open</span>
+      <span class="stat-value" style="color:var(--status-new)">${newCount}</span>
+      <span class="stat-sub">need triage</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">In Progress</span>
+      <span class="stat-value" style="color:var(--status-wip)">${wipCount}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Pending</span>
+      <span class="stat-value" style="color:var(--status-pending)">${pendCount}</span>
+      <span class="stat-sub">awaiting customer</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Topics</span>
+      <span class="stat-value">${new Set(allTickets.map(t=>t.topic)).size}</span>
+    </div>
+  `;
+}
+
+function buildStatusFilters() {
+  const statuses = [...new Set(allTickets.map(t => t.status))];
+  document.getElementById('statusFilters').innerHTML = statuses.map(s =>
+    `<button class="btn btn-sm ${activeStatuses.has(s)?'btn-active':''}" onclick="toggleStatus('${s}')">${s}</button>`
+  ).join('');
+}
+
+function buildOwnerFilters() {
+  const ownerCounts = {};
+  allTickets.forEach(t => { ownerCounts[t.owner] = (ownerCounts[t.owner] || 0) + 1; });
+  const sorted = Object.entries(ownerCounts).sort((a,b) => {
+    if (a[0] === 'Unassigned') return -1;
+    if (b[0] === 'Unassigned') return 1;
+    return b[1] - a[1];
+  });
+
+  document.getElementById('ownerFilters').innerHTML =
+    `<div class="owner-chip ${!activeOwner?'active':''}" onclick="setOwner(null)">All <span class="count">${allTickets.length}</span></div>` +
+    sorted.map(([owner, count]) =>
+      `<div class="owner-chip ${activeOwner===owner?'active':''}" onclick="setOwner('${owner.replace(/'/g,"\\'")}')">${owner} <span class="count">${count}</span></div>`
+    ).join('');
+}
+
+function buildTableHead() {
+  document.getElementById('tableHead').innerHTML = `<tr>
+    <th onclick="setSort('type')">Type <span class="sort-arrow">↕</span></th>
+    <th onclick="setSort('number')">Ticket <span class="sort-arrow">↕</span></th>
+    <th onclick="setSort('status')">Status <span class="sort-arrow">↕</span></th>
+    <th onclick="setSort('owner')">Owner <span class="sort-arrow">↕</span></th>
+    <th onclick="setSort('description')">Description <span class="sort-arrow">↕</span></th>
+    <th onclick="setSort('topic')">Topic <span class="sort-arrow">↕</span></th>
+  </tr>`;
+}
+
+// ─── FILTERS & SORT ───
+function setOwner(owner) {
+  activeOwner = owner;
+  buildOwnerFilters();
+  applyFilters();
+  renderPanel();
+}
+
+function toggleStatus(status) {
+  if (activeStatuses.has(status)) activeStatuses.delete(status);
+  else activeStatuses.add(status);
+  buildStatusFilters();
+  applyFilters();
+}
+
+function setSort(field) {
+  if (sortMode === field) sortMode = field + '-desc';
+  else if (sortMode === field + '-desc') sortMode = 'default';
+  else sortMode = field;
+  applyFilters();
+}
+
+function cycleSortMode() {
+  const modes = ['default', 'owner', 'status', 'topic', 'type'];
+  const idx = modes.indexOf(sortMode.replace('-desc',''));
+  sortMode = modes[(idx + 1) % modes.length];
+  document.getElementById('sortBtn').textContent = '↕ Sort: ' + sortMode.charAt(0).toUpperCase() + sortMode.slice(1);
+  applyFilters();
+}
+
+function applyFilters() {
+  const query = document.getElementById('searchInput').value.toLowerCase();
+  filteredTickets = allTickets.filter(t => {
+    if (activeOwner && t.owner !== activeOwner) return false;
+    if (activeStatuses.size > 0 && !activeStatuses.has(t.status)) return false;
+    if (query && !(
+      t.number.toLowerCase().includes(query) ||
+      t.description.toLowerCase().includes(query) ||
+      t.owner.toLowerCase().includes(query) ||
+      t.topic.toLowerCase().includes(query)
+    )) return false;
+    return true;
+  });
+
+  // Sort
+  if (sortMode !== 'default') {
+    const field = sortMode.replace('-desc','');
+    const desc = sortMode.endsWith('-desc');
+    filteredTickets.sort((a,b) => {
+      const va = (a[field]||'').toLowerCase();
+      const vb = (b[field]||'').toLowerCase();
+      return desc ? vb.localeCompare(va) : va.localeCompare(vb);
+    });
+  }
+
+  renderTable();
+}
+
+// ─── RENDER TABLE ───
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  if (filteredTickets.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No tickets match the current filters.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filteredTickets.map(t => `
+    <tr onclick="selectTicket('${t.number}')">
+      <td><span class="ticket-type ${typeClass(t.type)}">${t.type}</span></td>
+      <td><span class="ticket-id">${t.number}</span></td>
+      <td><span class="status-badge ${statusClass(t.status)}">${t.status}</span></td>
+      <td class="owner-cell">${t.owner}</td>
+      <td class="desc-cell">
+        <div class="desc-text">${escapeHtml(t.description)}</div>
+      </td>
+      <td><span class="topic-tag">${t.topic}</span></td>
+    </tr>
+  `).join('');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ─── SIDE PANEL ───
+let selectedTicket = null;
+
+function selectTicket(number) {
+  selectedTicket = allTickets.find(t => t.number === number);
+  if (!panelOpen) togglePanel();
+  renderPanel();
+}
+
+function togglePanel() {
+  panelOpen = !panelOpen;
+  document.getElementById('contentArea').classList.toggle('panel-closed', !panelOpen);
+  document.getElementById('sidePanel').style.display = panelOpen ? '' : 'none';
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.panel-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  renderPanel();
+}
+
+function renderPanel() {
+  const container = document.getElementById('panelContent');
+  const title = document.getElementById('panelTitle');
+  const source = activeOwner ? allTickets.filter(t => t.owner === activeOwner) : allTickets;
+  title.textContent = activeOwner ? activeOwner + ' — Insights' : 'Team Insights';
+
+  if (activeTab === 'trends') renderTrends(container, source);
+  else if (activeTab === 'similar') renderSimilar(container);
+  else if (activeTab === 'workload') renderWorkload(container);
+}
+
+function renderTrends(container, tickets) {
+  // Topic distribution
+  const topicCounts = {};
+  tickets.forEach(t => { topicCounts[t.topic] = (topicCounts[t.topic] || 0) + 1; });
+  const sortedTopics = Object.entries(topicCounts).sort((a,b) => b[1] - a[1]);
+  const maxTopic = sortedTopics.length > 0 ? sortedTopics[0][1] : 1;
+
+  const colors = [
+    'var(--accent)', 'var(--blue)', 'var(--green)', 'var(--yellow)',
+    'var(--purple)', 'var(--pink)', 'var(--cyan)', 'var(--orange)'
+  ];
+
+  // Status distribution
+  const statusCounts = {};
+  tickets.forEach(t => { statusCounts[t.status] = (statusCounts[t.status] || 0) + 1; });
+  const statusColors = {
+    'New': 'var(--status-new)', 'Open': 'var(--status-new)',
+    'Assigned': 'var(--status-assigned)',
+    'Work In Progress': 'var(--status-wip)',
+    'Pending Customer': 'var(--status-pending)',
+    'Resolved': 'var(--status-resolved)',
+    'Closed': 'var(--status-closed)'
+  };
+
+  container.innerHTML = `
+    <div class="panel-section">
+      <h4>Ticket Topics (${tickets.length} tickets)</h4>
+      <div class="mini-chart">
+        ${sortedTopics.map(([topic, count], i) => `
+          <div class="chart-bar-row">
+            <span class="chart-bar-label">${topic}</span>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill" style="width:${(count/maxTopic)*100}%;background:${colors[i%colors.length]}">${count}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="panel-section">
+      <h4>Status Breakdown</h4>
+      <div class="mini-chart">
+        ${Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]).map(([status, count]) => `
+          <div class="chart-bar-row">
+            <span class="chart-bar-label">${status}</span>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill" style="width:${(count/tickets.length)*100}%;background:${statusColors[status]||'var(--blue)'}">${count}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="panel-section">
+      <h4>Type Mix</h4>
+      <div class="mini-chart">
+        ${Object.entries(tickets.reduce((acc, t) => { acc[t.type]=(acc[t.type]||0)+1; return acc; }, {}))
+          .sort((a,b)=>b[1]-a[1])
+          .map(([type, count]) => `
+          <div class="chart-bar-row">
+            <span class="chart-bar-label">${type}</span>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill" style="width:${(count/tickets.length)*100}%;background:${type==='INC'?'var(--blue)':type==='TASK'?'var(--green)':'var(--purple)'}">${count}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderSimilar(container) {
+  if (!selectedTicket) {
+    container.innerHTML = `<div class="panel-section"><p style="color:var(--text-muted);font-size:0.85rem;">Click a ticket row to find similar tickets across the team.</p></div>`;
+    return;
+  }
+
+  const similar = findSimilar(selectedTicket, allTickets);
+  container.innerHTML = `
+    <div class="panel-section">
+      <h4>Selected: ${selectedTicket.number}</h4>
+      <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:4px;">${escapeHtml(selectedTicket.description)}</p>
+    </div>
+    <div class="panel-section">
+      <h4>Similar Tickets</h4>
+      ${similar.length === 0 ? '<p style="color:var(--text-muted);font-size:0.8rem;">No similar tickets found.</p>' :
+        similar.map(r => `
+          <div class="similar-ticket">
+            <span class="similar-ticket-id">${r.ticket.number}</span>
+            <span class="similarity-badge">${Math.round(r.score*100)}% match</span>
+            <div class="similar-ticket-desc">${escapeHtml(r.ticket.description)}</div>
+            <div class="similar-ticket-owner">Owner: ${r.ticket.owner}</div>
+          </div>
+        `).join('')
+      }
+    </div>
+  `;
+}
+
+function renderWorkload(container) {
+  const ownerCounts = {};
+  allTickets.forEach(t => {
+    if (!ownerCounts[t.owner]) ownerCounts[t.owner] = { total:0, new:0, wip:0, pending:0 };
+    ownerCounts[t.owner].total++;
+    const s = t.status.toLowerCase();
+    if (s.includes('new') || s === 'open') ownerCounts[t.owner].new++;
+    else if (s.includes('progress')) ownerCounts[t.owner].wip++;
+    else if (s.includes('pending')) ownerCounts[t.owner].pending++;
+  });
+  const sorted = Object.entries(ownerCounts).sort((a,b) => b[1].total - a[1].total);
+  const maxTotal = sorted.length > 0 ? sorted[0][1].total : 1;
+
+  container.innerHTML = `
+    <div class="panel-section">
+      <h4>Workload Distribution</h4>
+      <div class="mini-chart">
+        ${sorted.map(([owner, counts]) => `
+          <div class="chart-bar-row">
+            <span class="chart-bar-label" title="${owner}">${owner}</span>
+            <div class="chart-bar-track" style="display:flex;">
+              ${counts.new > 0 ? `<div style="width:${(counts.new/maxTotal)*100}%;height:100%;background:var(--status-new);border-radius:4px 0 0 4px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-family:var(--mono);color:#fff;font-weight:600;">${counts.new}</div>` : ''}
+              ${counts.wip > 0 ? `<div style="width:${(counts.wip/maxTotal)*100}%;height:100%;background:var(--status-wip);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-family:var(--mono);color:#fff;font-weight:600;">${counts.wip}</div>` : ''}
+              ${counts.pending > 0 ? `<div style="width:${(counts.pending/maxTotal)*100}%;height:100%;background:var(--status-pending);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-family:var(--mono);color:#fff;font-weight:600;">${counts.pending}</div>` : ''}
+              ${(counts.total - counts.new - counts.wip - counts.pending) > 0 ? `<div style="width:${((counts.total-counts.new-counts.wip-counts.pending)/maxTotal)*100}%;height:100%;background:var(--status-assigned);border-radius:0 4px 4px 0;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-family:var(--mono);color:#fff;font-weight:600;">${counts.total-counts.new-counts.wip-counts.pending}</div>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;">
+        <span style="font-size:0.7rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:var(--status-new);display:inline-block;"></span> New</span>
+        <span style="font-size:0.7rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:var(--status-wip);display:inline-block;"></span> WIP</span>
+        <span style="font-size:0.7rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:var(--status-pending);display:inline-block;"></span> Pending</span>
+        <span style="font-size:0.7rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:var(--status-assigned);display:inline-block;"></span> Assigned</span>
+      </div>
+    </div>
+  `;
+}
+
+// ─── EXPORT ───
+function showExportModal() { document.getElementById('exportModal').classList.add('active'); }
+function closeExportModal() { document.getElementById('exportModal').classList.remove('active'); }
+
+function exportCSV() {
+  const headers = ['Number','Type','Status','Owner','Description','Topic','Group'];
+  const rows = filteredTickets.map(t =>
+    [t.number, t.type, t.status, t.owner, `"${t.description.replace(/"/g,'""')}"`, t.topic, t.group]
+  );
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  downloadFile('ticketscope-export.csv', csv, 'text/csv');
+  closeExportModal();
+  showToast('Exported CSV with ' + filteredTickets.length + ' tickets.');
+}
+
+function exportJSON() {
+  const json = JSON.stringify(filteredTickets, null, 2);
+  downloadFile('ticketscope-export.json', json, 'application/json');
+  closeExportModal();
+  showToast('Exported JSON with ' + filteredTickets.length + ' tickets.');
+}
+
+function exportMarkdown() {
+  let md = `# TicketScope Export\n\n`;
+  md += `**Total:** ${filteredTickets.length} tickets\n`;
+  if (activeOwner) md += `**Filtered by:** ${activeOwner}\n`;
+  md += `**Generated:** ${new Date().toLocaleString()}\n\n`;
+
+  const byOwner = {};
+  filteredTickets.forEach(t => {
+    if (!byOwner[t.owner]) byOwner[t.owner] = [];
+    byOwner[t.owner].push(t);
+  });
+
+  for (const [owner, tickets] of Object.entries(byOwner)) {
+    md += `## ${owner} (${tickets.length})\n\n`;
+    tickets.forEach(t => {
+      md += `- **${t.number}** [${t.status}] ${t.description}\n`;
+    });
+    md += '\n';
+  }
+
+  downloadFile('ticketscope-export.md', md, 'text/markdown');
+  closeExportModal();
+  showToast('Exported Markdown summary.');
+}
+
+function downloadFile(name, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ─── ADD MORE SCREENSHOTS ───
+function showAddMore() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.png,.jpg,.jpeg,.gif,.webp,.bmp,.csv,.tsv,.txt';
+  input.multiple = true;
+  input.onchange = (e) => {
+    const files = Array.from(e.target.files);
+    const imageFiles = files.filter(f => /\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name));
+    const textFiles = files.filter(f => /\.(csv|tsv|txt)$/i.test(f.name));
+
+    if (textFiles.length > 0) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const newTickets = parseTicketData(ev.target.result);
+        const existingNumbers = new Set(allTickets.map(t => t.number));
+        const added = newTickets.filter(t => !existingNumbers.has(t.number));
+        allTickets.push(...added);
+        buildDashboard();
+        showToast(`Added ${added.length} new tickets (${newTickets.length - added.length} duplicates skipped).`);
+      };
+      reader.readAsText(textFiles[0]);
+      return;
+    }
+
+    if (imageFiles.length > 0) {
+      // Switch to import screen temporarily with the images
+      pendingImages = [];
+      imageFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target.result;
+          const base64 = dataUrl.split(',')[1];
+          pendingImages.push({ file, dataUrl, base64, mediaType: file.type || 'image/png' });
+          // When all loaded, process and merge
+          if (pendingImages.length === imageFiles.length) {
+            processScreenshotsAndMerge();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+  input.click();
+}
+
+async function processScreenshotsAndMerge() {
+  showToast('Extracting tickets from new screenshots...');
+  const existingNumbers = new Set(allTickets.map(t => t.number));
+  let newCount = 0;
+
+  for (const img of pendingImages) {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.base64 } },
+              { type: 'text', text: `Extract all ServiceNow tickets from this screenshot. Return ONLY a JSON array, no markdown, no backticks. Each object: {"number":"INC2076823","status":"New","owner":"Unassigned","description":"Short description","group":""}` }
+            ]
+          }]
+        })
+      });
+      const data = await response.json();
+      const text = data.content.map(c => c.text || '').join('');
+      const cleaned = text.replace(/```json|```/g, '').trim();
+      const tickets = JSON.parse(cleaned.match(/\[[\s\S]*\]/)?.[0] || cleaned);
+      if (Array.isArray(tickets)) {
+        for (const t of tickets) {
+          const num = (t.number || '').replace(/\s+/g, '').toUpperCase();
+          if (!existingNumbers.has(num)) {
+            existingNumbers.add(num);
+            allTickets.push({
+              number: num, type: detectType(num), status: normalizeStatus(t.status || 'Open'),
+              owner: t.owner || 'Unassigned', description: t.description || '',
+              group: t.group || '', topic: detectTopic(t.description || '')
+            });
+            newCount++;
+          }
+        }
+      }
+    } catch (e) { console.warn('Error processing image:', e); }
+  }
+
+  pendingImages = [];
+  buildDashboard();
+  showToast(`Added ${newCount} new tickets from screenshots.`);
+}
+
+// ─── KEYBOARD SHORTCUTS ───
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === '/' || e.key === 'f' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    document.getElementById('searchInput')?.focus();
+  }
+  if (e.key === 'Escape') {
+    document.getElementById('searchInput')?.blur();
+    closeExportModal();
+  }
+  if (e.key === 'e' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    if (allTickets.length > 0) showExportModal();
+  }
+});
+</script>
+</body>
+</html>
